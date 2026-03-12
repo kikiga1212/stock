@@ -16,6 +16,7 @@ public class ProductDTO {
     private String manufacturer;    //제조사
     private String category;        //종류(광,UPT,동축)
     private Long price;             //미터당 단가
-    private Integer stock;          //현재 보유 수량(m)
-    private String unit;
+    private Integer stock;          //현재 보유 수량(m 또는 unit)
+    private String unit;            //단위(m 또는 unit)
+    private String img;             //이미지파일
 }

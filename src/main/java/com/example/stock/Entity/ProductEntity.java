@@ -3,8 +3,6 @@ package com.example.stock.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "product")
 @Getter @Setter
@@ -30,4 +28,6 @@ public class ProductEntity extends BaseEntity{
     private Integer stock;          //현재 보유 수량
     @Column(length = 10)
     private String unit;            //단위 "m" 또는 "unit"저장
+    @Column(name="img")
+    private String img;             //이미지파일
 }
