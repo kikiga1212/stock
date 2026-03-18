@@ -69,9 +69,18 @@
         <div class="col" th:each="product : ${productList}">
             <div class="card h-100 shadow-sm border-0">
                 <div class="bg-light text-center py-4 rounded-top position-relative">
-                    <i class="bi bi-box-seam display-1 text-secondary"></i>
-                    <span class="position-absolute top-0 end-0 m-2 badge rounded-pill bg-dark"
-                    th:text="${product.unit}">m</span>
+                    <div class="position-relative overflow-hidden rounded-top" style="height: 200px;">
+                        <img th:if="${product.img != null and product.img != 'no_image.png'}"
+                             th:src="@{/product/display(fileName=${product.img})}"
+                             class="card-img-top w-100 h-100" style="object-fit: cover;" alt="상품 이미지">
+
+                        <img th:if="${product.img == null or product.img == 'no_image.png'}"
+                             th:src="@{/images/no_image.png}"
+                             class="card-img-top w-100 h-100" style="object-fit: cover;" alt="기본 이미지">
+
+                        <span class="position-absolute top-0 end-0 m-2 badge rounded-pill bg-dark opacity-75"
+                              th:text="${product.unit}">m</span>
+                    </div>
                 </div>
 
                 <div class="card-body">
