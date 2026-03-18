@@ -38,6 +38,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.modelmapper:modelmapper:3.1.1'
+    // build.gradle의 dependencies 섹션에 추가
+    //implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect:3.3.0'
+
 }
 
 tasks.named('test') {

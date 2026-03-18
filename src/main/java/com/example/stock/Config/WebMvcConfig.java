@@ -7,12 +7,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
-    @Value("file:///c:/data")
-    String uploadPath;
+    @Value("${com.example.upload.path}")
+    private String uploadPath;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:"+uploadPath);
+        // 브라우저가 /upload/** 주소로 요청하면 C:/upload/ 폴더를 뒤집니다.
+        registry.addResourceHandler("/upload/**")
+                .addResourceLocations("file:///" + uploadPath + "/");
     }
 }

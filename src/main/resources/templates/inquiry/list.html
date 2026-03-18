@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>재고닷컴 - 재고 공유 시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column; }
+        .content { flex: 1; }
+        .navbar-brand { font-weight: bold; color: #0d6efd !important; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">📦 재고닷컴</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" th:href="@{/product/list}">상품찾기</a></li>
+                <li class="nav-item" th:if="${session.user != null}"><a class="nav-link" th:href="@{/order/myOrders}">내 주문내역</a></li>
+                <li class="nav-item" th:if="${session.user != null}"><a class="nav-link" th:href="@{/product/myList}">내 판매상품</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/inquiry/list}">고객문의</a></li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item" th:if="${session.user == null}"><a class="nav-link" th:href="@{/member/login}">로그인</a></li>
+                <li class="nav-item" th:if="${session.user == null}"><a class="nav-link" th:href="@{/member/signup}">회원가입</a></li>
+                <li class="nav-item" th:if="${session.user != null}">
+                    <a class="nav-link text-info" th:href="@{/member/mypage}" th:text="${session.user.name} + '님'"></a>
+                </li>
+                <li class="nav-item" th:if="${session.user != null}"><a class="nav-link" th:href="@{/member/logout}">로그아웃</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-5 content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-question-circle"></i> 고객 문의 게시판</h2>
+        <a th:href="@{/inquiry/register}" class="btn btn-primary">
+            <i class="bi bi-pencil-square"></i> 문의하기
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 text-center">
+                <thead class="table-light">
+                <tr>
+                    <th style="width: 10%">번호</th>
+                    <th style="width: 50%">제목</th>
+                    <th style="width: 15%">작성자</th>
+                    <th style="width: 15%">등록일</th>
+                    <th style="width: 10%">상태</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${inquiries == null or inquiries.empty}">
+                    <td colspan="5" class="py-5 text-muted">등록된 문의가 없습니다.</td>
+                </tr>
+
+                <tr th:each="inq : ${inquiries}"
+                    th:onclick="|location.href='@{/inquiry/read/{id}(id=${inq.id})}'|"
+                    style="cursor: pointer;">
+                    <td th:text="${inq.id}">1</td>
+                    <td class="text-start">
+                        <span th:text="${inq.title}">배송 정보가 궁금합니다.</span>
+                        <i th:if="${inq.isSecret}" class="bi bi-lock-fill text-muted ms-1"></i>
+                    </td>
+                    <td th:text="${inq.writerName}">홍길동</td>
+                    <td th:text="${#temporals.format(inq.regDate, 'yyyy-MM-dd')}">2026-03-17</td>
+                    <td>
+                        <span th:if="${inq.status == 'PENDING'}" class="badge bg-secondary">대기중</span>
+                        <span th:if="${inq.status == 'ANSWERED'}" class="badge bg-success">답변완료</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <nav class="mt-4" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+        </ul>
+    </nav>
+</div>
+    <footer class="bg-white text-center py-4 text-muted border-top">
+        <div class="container">
+            <p class="mb-0">&copy; 2026 Stock Pro System. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 package com.example.stock.Service;
 
+import com.example.stock.Constant.Role;
 import com.example.stock.DTO.MemberDTO;
 import com.example.stock.Entity.MemberEntity;
 import com.example.stock.Repository.MemberRepository;
@@ -8,6 +9,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -15,15 +18,26 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final ModelMapper modelMapper;
 
+
     //회원가입
     public Long signup(MemberDTO memberDTO){
-        //1. 사업자등록번호 중복체크
-        validateDuplicateMember(memberDTO.getBusinessNo());
-
-        //2. DTO -> Entity 변환
+        //1. DTO -> Entity 변환
         MemberEntity memberEntity = modelMapper.map(memberDTO, MemberEntity.class);
 
-        //3. 저장후 번호 반환
+        //2. 중복가입 체크(DB 저장 전에 미리 확인하는 것이 효율적)
+        memberRepository.findByBusinessNo(memberEntity.getBusinessNo())
+                .ifPresent(m ->{
+                    throw new IllegalArgumentException("이미 존재하는 사업자 번호입니다. ");
+                });
+
+        //3. 권한 설정
+        // 사업자 번호가 있거나 특정 조건에 따라 가입 시점에 Role을 부여합니다.
+        if(memberDTO.getAdminKey() != null && "ADMIN_SECRET_KEY".equals(memberDTO.getAdminKey())){//관리자 키가 있는 경우
+            memberEntity.setRole(Role.ADMIN);
+        }else{
+            // 일반 사용자는 판매자이자 구매자이므로 통합 권한 부여
+            memberEntity.setRole(Role.USER);
+        }
         return memberRepository.save(memberEntity).getMid();
     }
 
@@ -37,12 +51,7 @@ public class MemberService {
         }
         return modelMapper.map(memberEntity, MemberDTO.class);
     }
-    private void validateDuplicateMember(String businessNo){
-        memberRepository.findByBusinessNo(businessNo)
-                .ifPresent(m ->{
-                    throw new IllegalStateException("이미 가입된 사업자등록번호입니다.");
-                });
-    }
+
 
     // 정보 수정
     public void updateMember(MemberDTO memberDTO) {
@@ -52,7 +61,7 @@ public class MemberService {
         // 비밀번호 제외, 수정가능한 필드 업데이트
         member.setName(memberDTO.getName());
         member.setPhone(memberDTO.getPhone());
-        member.setAddress(memberDTO.getAddress());
+       // member.setAddress(memberDTO.getAddress());
         member.setCompanyName(memberDTO.getCompanyName());
         member.setEmail(memberDTO.getEmail());
 

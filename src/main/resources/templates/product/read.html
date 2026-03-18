@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>재고닷컴 - 재고 공유 시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column; }
+        .content { flex: 1; }
+        .navbar-brand { font-weight: bold; color: #0d6efd !important; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">📦 재고닷컴</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" th:href="@{/product/list}">상품찾기</a></li>
+                <li class="nav-item" th:if="${session.user != null}"><a class="nav-link" th:href="@{/order/myOrders}">내 주문내역</a></li>
+                <li class="nav-item" th:if="${session.user != null}"><a class="nav-link" th:href="@{/product/myList}">내 판매상품</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/inquiry/list}">고객문의</a></li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item" th:if="${session.user == null}"><a class="nav-link" th:href="@{/member/login}">로그인</a></li>
+                <li class="nav-item" th:if="${session.user == null}"><a class="nav-link" th:href="@{/member/signup}">회원가입</a></li>
+                <li class="nav-item" th:if="${session.user != null}">
+                    <a class="nav-link text-info" th:href="@{/member/mypage}" th:text="${session.user.name} + '님'"></a>
+                </li>
+                <li class="nav-item" th:if="${session.user != null}"><a class="nav-link" th:href="@{/member/logout}">로그아웃</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-5 content">
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0 overflow-hidden">
+                <img th:src="@{/product/display(fileName=${product.img})}"
+                     class="img-fluid w-100"
+                     style="max-height: 500px; object-fit: contain; background-color: #f8f9fa;"
+                     alt="상품 이미지">
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="ps-md-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a th:href="@{/product/list}">상품목록</a></li>
+                        <li class="breadcrumb-item active" th:text="${product.category}">카테고리</li>
+                    </ol>
+                </nav>
+
+                <h2 class="fw-bold mb-2" th:text="${product.pname}">상품명</h2>
+                <p class="text-muted mb-4" th:text="'제조사: ' + ${product.manufacturer}">제조사 정보</p>
+
+                <hr>
+
+                <div class="my-4">
+                    <h3 class="text-primary fw-bold" th:text="${#numbers.formatInteger(product.price, 0, 'COMMA')} + '원'">가격</h3>
+                    <p class="mt-2 text-secondary">
+                        <i class="bi bi-box-seam me-1"></i> 남은 재고:
+                        <span class="fw-bold" th:text="${product.stock} + ' ' + ${product.unit}">10 개</span>
+                    </p>
+                </div>
+
+                <form th:action="@{/order/create}" method="post" class="mt-5 p-4 bg-light rounded shadow-sm">
+                    <input type="hidden" name="pid" th:value="${product.pid}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">구매 수량</label>
+                        <div class="input-group" style="width: 150px;">
+                            <input type="number" name="count" class="form-control" value="1" min="1" th:max="${product.stock}" required>
+                            <span class="input-group-text" th:text="${product.unit}">개</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button th:if="${session.user != null}" type="submit" class="btn btn-primary btn-lg py-3 fw-bold">
+                            <i class="bi bi-cart-check me-2"></i> 바로 주문하기
+                        </button>
+                        <a th:unless="${session.user != null}" th:href="@{/member/login}" class="btn btn-outline-dark btn-lg py-3 fw-bold">
+                            로그인 후 구매 가능합니다
+                        </a>
+                    </div>
+                </form>
+
+                <div th:if="${session.user != null and session.user.mid == product.seller.mid}" class="mt-4 d-flex gap-2">
+                    <a th:href="@{/product/update/{pid}(pid=${product.pid})}" class="btn btn-outline-primary flex-fill">상품 정보 수정</a>
+                    <form th:action="@{/product/delete/{pid}(pid=${product.pid})}" method="post" class="flex-fill d-flex">
+                        <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('정말 이 상품을 삭제하시겠습니까?')">상품 삭제</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5 pt-5 border-top">
+        <h4 class="fw-bold mb-4">상품 상세 정보</h4>
+        <div class="p-4 bg-white rounded border min-vh-25">
+            <p th:text="${product.pname} + '에 대한 상세 사양입니다.'"></p>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-white text-center py-4 text-muted border-top">
+    <div class="container">
+        <p class="mb-0">&copy; 2026 Stock Pro System. All rights reserved.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

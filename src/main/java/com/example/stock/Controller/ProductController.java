@@ -1,19 +1,33 @@
 package com.example.stock.Controller;
 
 import com.example.stock.DTO.MemberDTO;
+import com.example.stock.DTO.PageInfoDTO;
 import com.example.stock.DTO.ProductDTO;
 import com.example.stock.Entity.MemberEntity;
 import com.example.stock.Service.ProductService;
+import com.example.stock.Util.FileUpload;
+import com.example.stock.Util.PageInfo;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Controller
@@ -22,6 +36,10 @@ import java.util.List;
 public class ProductController {
     private final ProductService productService;
     private final ModelMapper modelMapper;
+    private final PageInfo pageInfo;
+    private final FileUpload fileUpload;
+
+
 
     //상품 등록 페이지
     @GetMapping("/register")
@@ -31,11 +49,57 @@ public class ProductController {
 
     //상품 등록처리
     @PostMapping("/register")
-    public String registerProduct(ProductDTO productDTO, HttpSession session){
+    public String registerProduct(
+            ProductDTO productDTO,
+            @RequestParam(value = "imgFiles", required = false) List<MultipartFile> imgFiles, // 여러 장 받기
+            HttpSession session){
+
+        // 세션에서 로그인 유저 정보 가져오기
         MemberDTO user = (MemberDTO) session.getAttribute("user");
-        //로그인한 세션 유저를 판매자로 설정
+
+        //로기인 안되어 있다면 로그인 페이지로 리다이렉트
+        if(user == null) return "redirect:/member/login";
+
+        // 1. 판매자 설정
         productDTO.setSeller(modelMapper.map(user, MemberEntity.class));
-        productService.registerProduct(productDTO);
+
+        //서비스 호출 (파일 저장 로직은 서비스의 registerProduct 안에 이미 있으므로 파일만 넘김)
+        productService.registerProductWithImages(productDTO, imgFiles);
+        return "redirect:/product/myList";
+    }
+
+
+    //상품 상세조회
+    @GetMapping("/read/{pid}")
+    public String readProduct(@PathVariable("pid") Long pid, Model model){
+        ProductDTO productDTO = productService.readProduct(pid);
+        model.addAttribute("product", productDTO);
+        return "product/read";
+    }
+
+    // 상품 수정 페이지로 이동
+    @GetMapping("/update/{pid}")
+    public String updateForm(@PathVariable("pid") Long pid, Model model){
+        ProductDTO productDTO = productService.readProduct(pid);
+        model.addAttribute("product", productDTO);
+        return "product/update";
+    }
+
+    //상품 수정 처리
+    @PostMapping("/update")
+    public String updateProduct(ProductDTO productDTO,
+                                @RequestParam(value = "imgFiles", required = false) List<MultipartFile> imgFiles,
+                                @RequestParam(value = "removedFiles", required = false) String removedFiles){
+
+        // 사진을 선택하지 않았다면 productDTO.img는 null인 상태로 서비스로 넘어감
+        productService.updateProduct(productDTO, imgFiles, removedFiles);
+        return "redirect:/product/read/"+productDTO.getPid();
+    }
+
+    //상품 삭제 처리
+    @PostMapping("/delete/{pid}")
+    public String deleteProduct(@PathVariable("pid") Long pid){
+        productService.deleteProduct(pid);
         return "redirect:/product/myList";
     }
 
@@ -43,6 +107,9 @@ public class ProductController {
     @GetMapping("/myList")
     public String myList(HttpSession session, Model model){
         MemberDTO user = (MemberDTO) session.getAttribute("user");
+        //로그인 안되어있으면  로그인페이지로 이동
+        if( user == null ) return "redirect:/member/login";
+
         MemberEntity seller = modelMapper.map(user, MemberEntity.class);
         List<ProductDTO> myProducts = productService.getMyProducts(seller);
         model.addAttribute("products", myProducts);
@@ -50,11 +117,48 @@ public class ProductController {
     }
 
     //상품 검색(구매자용)
-    @GetMapping("/search")
-    public String searchProducts(@RequestParam(value = "pName", required = false)//pName이 없어도 오류가 발생하지 않는다
-                                     String pName, Model model){
-        List<ProductDTO> searchProducts = productService.searchProducts(pName != null ? pName : "");
-        model.addAttribute("products", searchProducts);
+    @GetMapping({"/search","/list"})
+    public String getProductList(
+            @RequestParam(value = "pName", required = false, defaultValue = "") String pName,//pName이 없어도 오류가 발생하지 않는다
+            @RequestParam(value = "page", defaultValue = "1") int page,//페이지번호 파라미터 추가
+            Model model){
+        // 페이지번호가 1보다 작으면 1로 고정
+        if(page < 1) page = 1;
+
+        // 1. 페이지 요청 정보 생성 (한 페이지당 10개씩, 최신순 정렬)
+        // 스프링 데이터 JPA의 페이지는 0부터 시작하므로 page - 1
+        Pageable pageable = PageRequest.of(page - 1, 10, Sort.by("pid").descending());
+
+        //2. 서비스 호출(수정된 searchProducts는 이제 Page<ProductDTO>를 반환)
+        Page<ProductDTO> result = productService.getProductList(pageable, pName);
+
+        // 3. PageInfo 유틸리티를 사용하여 화면에 필요한 페이징 데이터(PageInfoDTO) 생성
+        PageInfoDTO pageInfoDTO = pageInfo.getPageInfo(result);
+
+        // 4. 모델에 데이터 담기
+        model.addAttribute("products", result.getContent()); // 실제 상품 목록 (List<ProductDTO>)
+        model.addAttribute("pageInfo", pageInfoDTO);         // 페이징 계산 결과
+        model.addAttribute("pName", pName);                  // 검색어 유지용
         return "product/list";
     }
+
+    @Value("${com.example.upload.path}") // application.properties의 경로와 일치해야 함
+    private String uploadPath;
+    // 이미지 출력 엔드포인트
+    @GetMapping("/display")
+    @ResponseBody
+    public ResponseEntity<Resource> display(String fileName) {
+        // 💡 File.separator를 사용하여 OS에 맞는 경로 구분자 사용 (윈도우는 \)
+        Resource resource = fileUpload.getFileAsResourse(fileName);
+        HttpHeaders header = new HttpHeaders();
+
+        try {
+            Path filePath = Paths.get(uploadPath + File.separator + fileName);
+            header.add("Content-Type", Files.probeContentType(filePath));
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(resource, header, HttpStatus.OK);
+    }
+
 }//end

@@ -18,4 +18,6 @@ public class MemberDTO {
     private String phone;       //전화번호
     private String address;     //주소
     private Role role;          //사용자권한(USER,ADMIN)
+
+    private String adminKey;
 }

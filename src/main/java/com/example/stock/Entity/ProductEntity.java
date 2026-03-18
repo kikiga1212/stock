@@ -3,6 +3,9 @@ package com.example.stock.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "product")
 @Getter @Setter
@@ -16,10 +19,12 @@ public class ProductEntity extends BaseEntity{
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_mid")
-    private MemberEntity seller;    //등록한 회원번호
+    private MemberEntity seller;    //판매자
 
     @Column(length = 100, nullable = false)
-    private String pName;          //케이블명칭
+    private String pname;           //케이블명칭
+    @Column(length = 500)
+    private String content;         //설명
     @Column(length = 50)
     private String manufacturer;    //제조사
     @Column(length = 50)
@@ -30,4 +35,18 @@ public class ProductEntity extends BaseEntity{
     private String unit;            //단위 "m" 또는 "unit"저장
     @Column(name="img")
     private String img;             //이미지파일
+
+    // 💡 이미지 리스트 추가 (Cascade를 통해 상품 저장 시 이미지도 같이 저장됨)
+    @Builder.Default
+    @OneToMany(mappedBy = "product",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    private List<ProductImage> imageList = new ArrayList<>();
+
+    // 💡 이미지 추가를 도와주는 편의 메서드
+    public void addImage(ProductImage productImage) {
+        imageList.add(productImage);
+        productImage.setProduct(this);
+    }
 }
