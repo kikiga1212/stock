@@ -42,9 +42,16 @@ public class ProductService {
 
     //페이징처리, 상품검색, 구매자용
     @Transactional(readOnly = true)
-    public Page<ProductDTO> getProductList(Pageable pageable, String pName){
-        //JPA의 Page기능을 사용하여 페이징 처리된 엔티티 조회
-        Page<ProductEntity> result = productRepository.findByPnameContaining(pName, pageable);
+    public Page<ProductDTO> getProductList(Pageable pageable, String pname){
+        Page<ProductEntity> result;
+
+        if(pname == null || pname.trim().isEmpty()) {
+            //검색어가 없으면 전체조회
+            result = productRepository.findAll(pageable);
+        }else {
+            //검색어가 있으면 필터링 조회
+            result = productRepository.findByPnameContaining(pname, pageable);
+        }
 
         //Entity를 DTO로 변환하여 반환
         return result.map(entity -> modelMapper.map(entity, ProductDTO.class));

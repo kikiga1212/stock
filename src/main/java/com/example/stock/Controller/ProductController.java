@@ -120,9 +120,9 @@ public class ProductController {
     }
 
     //상품 검색(구매자용)
-    @GetMapping({"/search","/list"})
+    @GetMapping({"/","/search","/list"})
     public String getProductList(
-            @RequestParam(value = "pName", required = false, defaultValue = "") String pName,//pName이 없어도 오류가 발생하지 않는다
+            @RequestParam(value = "pname", required = false, defaultValue = "") String pname,//pname이 없어도 오류가 발생하지 않는다
             @RequestParam(value = "page", defaultValue = "1") int page,//페이지번호 파라미터 추가
             Model model){
         // 페이지번호가 1보다 작으면 1로 고정
@@ -133,7 +133,7 @@ public class ProductController {
         Pageable pageable = PageRequest.of(page - 1, 10, Sort.by("pid").descending());
 
         //2. 서비스 호출(수정된 searchProducts는 이제 Page<ProductDTO>를 반환)
-        Page<ProductDTO> result = productService.getProductList(pageable, pName);
+        Page<ProductDTO> result = productService.getProductList(pageable, pname);
 
         // 3. PageInfo 유틸리티를 사용하여 화면에 필요한 페이징 데이터(PageInfoDTO) 생성
         PageInfoDTO pageInfoDTO = pageInfo.getPageInfo(result);
@@ -141,7 +141,7 @@ public class ProductController {
         // 4. 모델에 데이터 담기
         model.addAttribute("products", result.getContent()); // 실제 상품 목록 (List<ProductDTO>)
         model.addAttribute("pageInfo", pageInfoDTO);         // 페이징 계산 결과
-        model.addAttribute("pName", pName);                  // 검색어 유지용
+        model.addAttribute("pname", pname);                  // 검색어 유지용
         return "product/list";
     }
 

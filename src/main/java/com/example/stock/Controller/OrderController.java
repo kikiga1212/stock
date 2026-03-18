@@ -47,14 +47,15 @@ public class OrderController {
         MemberDTO user = (MemberDTO) session.getAttribute("user");
         List<OrderDTO> orders = orderService.getSellersOrders(modelMapper.map(user, MemberEntity.class));
         model.addAttribute("orders", orders);
-        return "order/sellersOrders";
+        return "order/sellerOrders";
     }
 
     //주문상태변경(배송준비, 발송완료, 취소 등)
     @PostMapping("/updateStatus")
     public String updateStatus(@RequestParam("oid") Long oid,
                                @RequestParam("status") String status,
-                               @RequestParam("type") String type){
+                               // 💡 type이 없을 경우를 대비해 기본값을 주거나 필수가 아님을 명시합니다.
+                               @RequestParam(value = "type", required = false, defaultValue = "seller") String type){
         orderService.updateStatus(oid, status);
         //판매자 페이지에서 변경인지, 구매자페이지에서 변경했는지 따라 리다이렉트 분기
         return "seller".equals(type) ? "redirect:/order/sellersOrders" : "redirect:/order/myOrders";

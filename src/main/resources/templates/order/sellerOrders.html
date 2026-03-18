@@ -59,7 +59,7 @@
             </tr>
             </thead>
             <tbody class="text-center">
-            <tr th:if="${orders == null or orders.empty}">
+            <tr th:if="${orders == null or #lists.isEmpty(orders)}">
                 <td colspan="7" class="py-5 text-muted">들어온 주문이 없습니다.</td>
             </tr>
             <tr th:each="order : ${orders}" class="align-middle">
@@ -69,7 +69,7 @@
                     <strong th:text="${order.product.pname}">상품명</strong>
                 </td>
                 <td>
-                    <span th:text="${order.buyer.mName}">구매자</span><br>
+                    <span th:text="${order.buyer.name}">구매자</span><br>
                     <small class="text-muted" th:text="${order.buyer.phone}"></small>
                 </td>
                 <td th:text="${order.count} + '개'">1</td>
