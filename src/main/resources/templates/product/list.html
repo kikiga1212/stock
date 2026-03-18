@@ -79,10 +79,15 @@
             <tr th:each="p : ${products}" th:onclick="|location.href='@{/product/read/{pid}(pid=${p.pid})}'|" style="cursor: pointer;">
                 <td th:text="${p.pid}" scope="row"></td>
                 <td>
-                    <img th:src="|/upload/${p.img}|"
-                         class="rounded"
-                         style="width: 60px; height: 60px; object-fit: cover;"
-                         onerror="this.src='/img/no-image.png';">
+                <td>
+                    <img th:if="${p.img != 'no_image.png'}"
+                         th:src="@{/product/display(fileName=${p.img})}"
+                         class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+
+                    <img th:if="${p.img == 'no_image.png'}"
+                         th:src="@{/images/no_image.png}"
+                         class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                </td>
                 </td>
                 <td th:text="${p.pname}" class="fw-bold"></td>
                 <td th:text="${p.manufacturer}"></td>

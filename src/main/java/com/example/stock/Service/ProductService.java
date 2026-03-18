@@ -53,11 +53,8 @@ public class ProductService {
     @Value("${com.example.upload.path}")
     private String uploadPath;
 
-
     //상품등록(다중 이미지 처리)
     public Long registerProductWithImages(ProductDTO productDTO, List<MultipartFile> imgFiles){
-        registerProductWithImages(productDTO, imgFiles);
-
         ProductEntity productEntity = modelMapper.map(productDTO, ProductEntity.class);
 
         // 💡 1. 시작할 때 기본 이미지를 먼저 설정합니다.
@@ -97,13 +94,7 @@ public class ProductService {
                 }
             }
         }
-        if (imgFiles != null && !imgFiles.isEmpty()) {
-            for (MultipartFile file : imgFiles) {
-                if (!file.isEmpty()) {
-                    // 저장 로직
-                }
-            }
-        }
+
         // 최종 저장
         return productRepository.save(productEntity).getPid();
 
@@ -134,23 +125,16 @@ public class ProductService {
         productEntity.setContent(productDTO.getContent());
 
         // 2. 부분삭제
-        if(removedFiles != null && !removedFiles.trim().isEmpty()){
-            String[] deleteList= removedFiles.split(",");
-            for(String fileName : deleteList){
-                if(fileName.isEmpty()) continue;
-
-                // 파일 삭제
-                fileUpload.deleteFile(fileName);
-
-                // DB관계 삭제(ProductImage 리스트에서 제거)
-                //orphanRemoval = true 설정 덕분에 리스트에서 제거하면 DB에서도 삭제됩니다.
+        if (removedFiles != null && !removedFiles.trim().isEmpty()) {
+            for (String fileName : removedFiles.split(",")) {
+                if (fileName.isEmpty()) continue;
+                fileUpload.deleteFile(fileName); // 실제 파일 삭제
                 productEntity.getImageList().removeIf(img ->
-                        (img.getUuid() + "_" + img.getImgName()).equals(fileName)
-                );
+                        (img.getUuid() + "_" + img.getImgName()).equals(fileName));
             }
         }
 
-        // [3] 새 이미지 추가 로직
+        // 3. 새 이미지 추가
         if (imgFiles != null) {
             for (MultipartFile file : imgFiles) {
                 if (!file.isEmpty()) {
@@ -158,10 +142,10 @@ public class ProductService {
                     String saveName = uuid + "_" + file.getOriginalFilename();
                     try {
                         file.transferTo(new File(uploadPath, saveName));
-                        ProductImage productImage = ProductImage.builder()
+                        ProductImage img = ProductImage.builder()
                                 .uuid(uuid).imgName(file.getOriginalFilename())
                                 .product(productEntity).build();
-                        productEntity.addImage(productImage);
+                        productEntity.addImage(img);
                     } catch (IOException e) { e.printStackTrace(); }
                 }
             }
@@ -170,6 +154,7 @@ public class ProductService {
         // [4] 최종 이미지 상태 점검 (핵심!)
         // 이미지가 하나라도 있으면 첫 번째 이미지를 대표 이미지(img)로 설정
         if (!productEntity.getImageList().isEmpty()) {
+            // 리스트에 이미지가 하나라도 남아있다면, 첫 번째 이미지를 대표 이미지로 설정
             ProductImage firstImg = productEntity.getImageList().get(0);
             productEntity.setImg(firstImg.getUuid() + "_" + firstImg.getImgName());
         } else {

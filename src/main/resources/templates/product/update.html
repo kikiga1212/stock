@@ -92,6 +92,7 @@
                     <div class="col-md-12 mb-3">
                         <label class="form-label fw-bold">이미지 교체 (새로 선택 시 기존 이미지는 대체됩니다)</label>
                         <input type="file" name="imgFiles" id="imgFiles" class="form-control" accept="image/*" multiple>
+
                         <div id="fileHelp" class="form-text text-danger">최대 5장까지 가능합니다.</div>
 
                         <input type="hidden" name="removedFiles" id="removedFiles" value="">
@@ -104,8 +105,7 @@
 
                                     <button type="button"
                                             class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1"
-                                            th:data-filename="${image.uuid + '_' + image.imgName}"
-                                            onclick="removeExistingImage(this, this.getAttribute('data-filename'))">&times;</button>
+                                            th:onclick="removeExistingImage(this, [[${image.uuid + '_' + image.imgName}]])">&times;</button>
                                 </div>
                             </th:block>
                         </div>
@@ -126,7 +126,20 @@
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
+    let removedFilesList = []; // 삭제할 파일명을 담는 배열
+
+    // [1] 기존 이미지 삭제 함수 (작동 확인됨)
+    function removeExistingImage(button, fileName) {
+        if (confirm("이 이미지를 삭제하시겠습니까?")) {
+            button.closest('.position-relative').remove();
+            removedFilesList.push(fileName);
+            document.getElementById('removedFiles').value = removedFilesList.join(',');
+            console.log("삭제 대기 목록:", document.getElementById('removedFiles').value);
+        }
+    }
+
+    // [2] 새 파일 선택 및 미리보기 로직 (여러 장 처리 추가)
     const imgInput = document.getElementById('imgFiles');
     const previewContainer = document.getElementById('imagePreviewContainer');
     const MAX_FILES = 5;
@@ -134,18 +147,18 @@
     imgInput.addEventListener('change', function(e) {
         const files = Array.from(e.target.files);
 
-        // 1. 새 파일을 선택하면 '새로 추가된' 미리보기만 삭제 (기존 이미지는 유지)
+        // 새로 추가된 미리보기만 찾아 제거 (기존 이미지는 유지)
         const newPreviews = previewContainer.querySelectorAll('.new-upload-preview');
         newPreviews.forEach(el => el.remove());
 
-        // 2. 개수 제한 체크
+        // 💡 중요: 개수 제한 체크 (선택한 파일 전체 개수)
         if (files.length > MAX_FILES) {
-            alert(`새 이미지는 한 번에 최대 ${MAX_FILES}장까지 업로드 가능합니다.`);
+            alert(`새 이미지는 한 번에 최대 ${MAX_FILES}장까지만 업로드 가능합니다.`);
             this.value = ""; // 선택 초기화
             return;
         }
 
-        // 3. 미리보기 생성 (input.files를 건드리지 않고 브라우저 기본 선택값 그대로 전송)
+        // 💡 여러 장의 파일을 순회하며 미리보기 생성
         files.forEach(file => {
             const reader = new FileReader();
             reader.onload = function(event) {
@@ -154,78 +167,22 @@
                 div.style = 'width: 100px; height: 100px;';
                 div.innerHTML = `
                     <img src="${event.target.result}" class="img-thumbnail w-100 h-100" style="object-fit: cover; border: 2px solid #0d6efd;">
-                    <span class="badge bg-primary position-absolute bottom-0 start-0 w-100" style="font-size: 0.7rem;">추가됨</span>
+                    <span class="badge bg-primary position-absolute bottom-0 start-0 w-100" style="font-size: 0.7rem;">New</span>
                 `;
                 previewContainer.appendChild(div);
             };
             reader.readAsDataURL(file);
         });
-
-        // 💡 핵심: 별도의 fileList 관리 없이 imgInput.files에 담긴 그대로 서버로 보냅니다.
     });
 </script>
+
 
 <footer class="bg-white text-center py-4 text-muted border-top">
     <div class="container">
         <p class="mb-0">&copy; 2026 Stock Pro System. All rights reserved.</p>
     </div>
 </footer>
-<script>
-    const imgInput = document.getElementById('imgFiles');
-    const previewContainer = document.getElementById('imagePreviewContainer');
-    const MAX_FILES = 5;
-    let fileList = [];
 
-    imgInput.addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
-
-        if (fileList.length + files.length > MAX_FILES) {
-            alert(`최대 ${MAX_FILES}장까지만 업로드 가능합니다.`);
-            this.value = "";
-            return;
-        }
-
-        // 새 파일 선택 시 기존 미리보기는 비우고 싶다면 아래 주석 해제
-        // previewContainer.innerHTML = '';
-        // fileList = [];
-
-        files.forEach(file => {
-            fileList.push(file);
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const card = document.createElement('div');
-                card.className = 'position-relative';
-                card.style = 'width: 100px; height: 100px;';
-                card.innerHTML = `
-                    <img src="${event.target.result}" class="img-thumbnail w-100 h-100" style="object-fit: cover;">
-                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1">&times;</button>
-                `;
-
-                card.querySelector('button').addEventListener('click', function() {
-                    const index = fileList.indexOf(file);
-                    if (index > -1) {
-                        fileList.splice(index, 1);
-                        updateInputFiles();
-                    }
-                    card.remove();
-                });
-                previewContainer.appendChild(card);
-            };
-            reader.readAsDataURL(file);
-        });
-        updateInputFiles();
-    });
-
-    function updateInputFiles() {
-        const dataTransfer = new DataTransfer();
-        fileList.forEach(file => dataTransfer.items.add(file));
-        // 💡 기존의 input type="file" 엘리먼트를 정확히 찾아 업데이트
-        const imgInput = document.getElementById('imgFiles');
-        if (imgInput) {
-            imgInput.files = dataTransfer.files;
-        }
-    }
-</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

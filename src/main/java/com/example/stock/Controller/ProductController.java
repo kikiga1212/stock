@@ -11,6 +11,8 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -146,17 +149,27 @@ public class ProductController {
     private String uploadPath;
     // 이미지 출력 엔드포인트
     @GetMapping("/display")
-    @ResponseBody
-    public ResponseEntity<Resource> display(String fileName) {
-        // 💡 File.separator를 사용하여 OS에 맞는 경로 구분자 사용 (윈도우는 \)
-        Resource resource = fileUpload.getFileAsResourse(fileName);
-        HttpHeaders header = new HttpHeaders();
+     public ResponseEntity<Resource> display(@RequestParam("fileName") String fileName) {
+        // 1. 경로 설정
+        Resource resource = new FileSystemResource(uploadPath + File.separator + fileName);
 
+        // 2. 💡 만약 파일이 하드디스크에 없다면? (404 방지 로직)
+        if (!resource.exists()) {
+            // 프로젝트 내부의 static/images/no_image.png를 기본값으로 사용
+            resource = new ClassPathResource("static/images/no_image.png");
+
+            // 만약 static에도 없다면 에러 대신 빈 응답을 보냄
+            if (!resource.exists()) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+        }
+
+        String resourceName = resource.getFilename();
+        HttpHeaders header = new HttpHeaders();
         try {
-            Path filePath = Paths.get(uploadPath + File.separator + fileName);
-            header.add("Content-Type", Files.probeContentType(filePath));
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            header.add("Content-Type", Files.probeContentType(resource.getFile().toPath()));
+        } catch (IOException e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(resource, header, HttpStatus.OK);
     }
