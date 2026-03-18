@@ -69,8 +69,12 @@ public class MemberService {
     }
 
     // 비밀번호 재설정
+    @Transactional
     public void updatePassword(Long mid, String newPassword) {
-        MemberEntity member = memberRepository.findById(mid).get();
+        //1. 회원조회
+        MemberEntity member = memberRepository.findById(mid)
+                        .orElseThrow(() -> new IllegalArgumentException("해당 회원이 존재하지 않습니다."));
+        //2. 비밀번호 변경
         member.setPassword(newPassword);
     }
 

@@ -45,8 +45,14 @@ public class InquiryController {
     @GetMapping("/list")
     public String myList(HttpSession session, Model model){
         MemberDTO user = (MemberDTO) session.getAttribute("user");
-        MemberEntity writer = modelMapper.map(user, MemberEntity.class);
+        //1. 로그인 여부 확인
+        if(user == null) { //비로그인이면 로그인페이지로 이동
+            return "redirect:/member/login";
+            // 전체 공개 게시판이면 유전 변환 로직을 건너뜀
+        }
 
+        //2. 로그인이 확인된 경우에만 ModelMapper 사용
+        MemberEntity writer = modelMapper.map(user, MemberEntity.class);
         List<InquiryDTO> inquiries = inquiryService.getMyInquiries(writer);
         model.addAttribute("inquiries", inquiries);
         return "inquiry/list";
